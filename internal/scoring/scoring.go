@@ -55,6 +55,12 @@ func ToSubGrade(score int) string {
 	}
 }
 
+const (
+	maxWarnings              = 10
+	maxWarningDetailsPerMetric = 3
+	warningScoreThreshold    = 70
+)
+
 func ComputeComposite(results []*analyzer.Result, cfg *config.Config) *CompositeScore {
 	totalWeight := 0
 	for _, w := range cfg.Weights {
@@ -82,9 +88,9 @@ func ComputeComposite(results []*analyzer.Result, cfg *config.Config) *Composite
 		})
 
 		// Collect warnings from low-scoring metrics
-		if result.Score < 70 {
+		if result.Score < warningScoreThreshold {
 			for i, detail := range result.Details {
-				if i >= 3 {
+				if i >= maxWarningDetailsPerMetric {
 					break
 				}
 				warnings = append(warnings, detail.Message)
@@ -94,8 +100,8 @@ func ComputeComposite(results []*analyzer.Result, cfg *config.Config) *Composite
 
 	overall := int(math.Round(weightedSum))
 
-	if len(warnings) > 10 {
-		warnings = warnings[:10]
+	if len(warnings) > maxWarnings {
+		warnings = warnings[:maxWarnings]
 	}
 
 	return &CompositeScore{

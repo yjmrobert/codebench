@@ -11,7 +11,10 @@ import (
 
 type DuplicationAnalyzer struct{}
 
-const minDuplicateLines = 6
+const (
+	minDuplicateLines    = 6
+	maxDuplicationDetails = 20
+)
 
 type normalizedLine struct {
 	text         string
@@ -92,10 +95,10 @@ func (a *DuplicationAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Co
 			}
 		}
 
-		if len(details) < 20 {
+		if len(details) < maxDuplicationDetails {
 			first := locations[0]
 			for _, other := range locations[1:] {
-				if len(details) >= 20 {
+				if len(details) >= maxDuplicationDetails {
 					break
 				}
 				details = append(details, Detail{

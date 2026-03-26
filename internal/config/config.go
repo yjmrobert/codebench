@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -109,11 +110,11 @@ func Load(cwd string, configPath string) (*Config, error) {
 		if os.IsNotExist(err) {
 			return cfg, nil
 		}
-		return cfg, nil
+		return nil, fmt.Errorf("failed to read config file %s: %w", configPath, err)
 	}
 
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return DefaultConfig(), nil
+		return nil, fmt.Errorf("failed to parse config file %s: %w", configPath, err)
 	}
 
 	// Ensure weights map has all keys
@@ -121,6 +122,13 @@ func Load(cwd string, configPath string) (*Config, error) {
 	for k, v := range defaults.Weights {
 		if _, ok := cfg.Weights[k]; !ok {
 			cfg.Weights[k] = v
+		}
+	}
+
+	// Validate weights are non-negative
+	for k, v := range cfg.Weights {
+		if v < 0 {
+			return nil, fmt.Errorf("weight for %q must be non-negative, got %d", k, v)
 		}
 	}
 

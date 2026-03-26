@@ -42,8 +42,11 @@ func RenderHistory(runs []storage.RunRecord) string {
 
 	rows := make([][]string, 0, len(reversed))
 	for i, run := range reversed {
-		t, _ := time.Parse(time.RFC3339, run.Timestamp)
-		date := t.Format("2006-01-02")
+		t, parseErr := time.Parse(time.RFC3339, run.Timestamp)
+		date := run.Timestamp
+		if parseErr == nil {
+			date = t.Format("2006-01-02")
+		}
 		commitShort := run.CommitHash
 		if len(commitShort) > 7 {
 			commitShort = commitShort[:7]

@@ -26,7 +26,14 @@ func NewHistoryCmd() *cobra.Command {
 }
 
 func runHistory(cmd *cobra.Command, args []string) error {
-	cwd, _ := os.Getwd()
+	if flagLimit < 1 || flagLimit > 1000 {
+		return fmt.Errorf("--limit must be between 1 and 1000, got %d", flagLimit)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
 	dbPath := filepath.Join(cwd, ".codebench", "history.db")
 
 	runs, err := storage.GetHistory(dbPath, flagLimit)

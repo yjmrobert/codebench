@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -33,6 +34,7 @@ func DiscoverFiles(cfg *config.Config, cwd string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(cwd, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: error accessing %s: %v\n", path, err)
 			return nil
 		}
 		if info.IsDir() {
@@ -41,12 +43,17 @@ func DiscoverFiles(cfg *config.Config, cwd string) ([]string, error) {
 
 		rel, err := filepath.Rel(cwd, path)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: cannot resolve relative path for %s: %v\n", path, err)
 			return nil
 		}
 
 		// Check ignore patterns
 		for _, pattern := range cfg.Ignore {
-			matched, _ := doublestar.Match(pattern, rel)
+			matched, matchErr := doublestar.Match(pattern, rel)
+			if matchErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: invalid ignore pattern %q: %v\n", pattern, matchErr)
+				continue
+			}
 			if matched {
 				return nil
 			}
