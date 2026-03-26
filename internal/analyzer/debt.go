@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strings"
 
 	"github.com/codebench/codebench/internal/config"
 	"github.com/codebench/codebench/internal/parser"
@@ -18,6 +19,9 @@ const (
 
 var debtMarkerPattern = regexp.MustCompile(`(?i)\b(TODO|FIXME|HACK|XXX)\b`)
 
+// commentPrefixPattern checks if a line contains a comment before the marker.
+var commentPrefixPattern = regexp.MustCompile(`(?:^|\s)(?://|/\*|#|--|%|;)\s*`)
+
 func (a *DebtAnalyzer) Name() config.MetricName {
 	return config.MetricDebt
 }
@@ -31,23 +35,50 @@ func (a *DebtAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Config, c
 		totalLines += file.LineCount
 
 		for i, line := range file.Lines {
-			matches := debtMarkerPattern.FindAllString(line, -1)
-			if len(matches) > 0 {
-				totalMarkers += len(matches)
-				for _, match := range matches {
-					trimmed := line
-					if len(trimmed) > maxLinePreviewLength {
-						trimmed = trimmed[:maxLinePreviewLength]
-					}
-					details = append(details, Detail{
-						File:      file.RelativePath,
-						Message:   fmt.Sprintf("%s: %s", match, trimmed),
-						Line:      i + 1,
-						Severity:  "info",
-						Category:  "resolve-todo",
-						Threshold: cfg.Thresholds.MaxDebtDensity,
-					})
+			matches := debtMarkerPattern.FindAllStringIndex(line, -1)
+			if len(matches) == 0 {
+				continue
+			}
+
+			// Only count markers that appear in comments or at word boundaries
+			// not inside string literals or regex patterns
+			for _, loc := range matches {
+				prefix := line[:loc[0]]
+				marker := line[loc[0]:loc[1]]
+
+				// Skip if preceded by a hyphen (e.g., "resolve-todo")
+				if loc[0] > 0 && line[loc[0]-1] == '-' {
+					continue
 				}
+
+				// Skip if the marker appears inside backticks, which
+				// suggests a string/regex literal
+				if strings.Count(prefix, "`")%2 == 1 {
+					continue
+				}
+
+				// Check if there's a comment indicator before this marker
+				hasComment := commentPrefixPattern.MatchString(prefix)
+				// Also accept markers at the start of a line (after whitespace)
+				isLineStart := strings.TrimSpace(prefix) == ""
+
+				if !hasComment && !isLineStart {
+					continue
+				}
+
+				totalMarkers++
+				trimmed := line
+				if len(trimmed) > maxLinePreviewLength {
+					trimmed = trimmed[:maxLinePreviewLength]
+				}
+				details = append(details, Detail{
+					File:      file.RelativePath,
+					Message:   fmt.Sprintf("%s: %s", strings.ToUpper(marker), strings.TrimSpace(trimmed)),
+					Line:      i + 1,
+					Severity:  "info",
+					Category:  "resolve-todo",
+					Threshold: cfg.Thresholds.MaxDebtDensity,
+				})
 			}
 		}
 	}

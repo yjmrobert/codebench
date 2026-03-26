@@ -37,7 +37,7 @@ var reservedWords = map[string]bool{
 	"if": true, "for": true, "while": true, "switch": true, "catch": true, "else": true,
 }
 
-var funcPatterns = []*regexp.Regexp{
+var jsFuncPatterns = []*regexp.Regexp{
 	// function declarations: function name(
 	regexp.MustCompile(`(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s+(\w+)\s*\(`),
 	// arrow functions: const name = (...) => {
@@ -48,11 +48,25 @@ var funcPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?m)^\s+(?:async\s+)?(?:static\s+)?(\w+)\s*\([^)]*\)\s*\{`),
 }
 
-func extractFunctions(content string, lines []string) []FunctionInfo {
+var goFuncPatterns = []*regexp.Regexp{
+	// func name(
+	regexp.MustCompile(`(?m)^func\s+(\w+)\s*\(`),
+	// method: func (receiver) name(
+	regexp.MustCompile(`(?m)^func\s+\([^)]+\)\s+(\w+)\s*\(`),
+}
+
+var pythonFuncPattern = regexp.MustCompile(`(?m)^\s*def\s+(\w+)\s*\(`)
+
+var rustFuncPatterns = []*regexp.Regexp{
+	// fn name(
+	regexp.MustCompile(`(?m)(?:pub\s+)?(?:async\s+)?fn\s+(\w+)\s*[<(]`),
+}
+
+func extractBraceFunctions(content string, lines []string, patterns []*regexp.Regexp) []FunctionInfo {
 	var functions []FunctionInfo
 	seenLines := make(map[int]bool)
 
-	for _, pattern := range funcPatterns {
+	for _, pattern := range patterns {
 		matches := pattern.FindAllStringSubmatchIndex(content, -1)
 		for _, match := range matches {
 			name := content[match[2]:match[3]]
@@ -116,6 +130,68 @@ func extractFunctions(content string, lines []string) []FunctionInfo {
 	return functions
 }
 
+func extractPythonFunctions(content string, lines []string) []FunctionInfo {
+	var functions []FunctionInfo
+	matches := pythonFuncPattern.FindAllStringSubmatchIndex(content, -1)
+
+	for _, match := range matches {
+		name := content[match[2]:match[3]]
+		startOffset := match[0]
+		startLine := strings.Count(content[:startOffset], "\n") + 1
+
+		// Determine indentation level of the def line
+		defLine := lines[startLine-1]
+		baseIndent := len(defLine) - len(strings.TrimLeft(defLine, " \t"))
+
+		// Find end by looking for next line at same or lesser indentation
+		endLine := startLine
+		for i := startLine; i < len(lines); i++ {
+			line := lines[i]
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			indent := len(line) - len(strings.TrimLeft(line, " \t"))
+			if indent <= baseIndent && i > startLine {
+				break
+			}
+			endLine = i + 1
+		}
+
+		lineCount := endLine - startLine + 1
+		var bodyLines []string
+		if startLine-1 < len(lines) && endLine <= len(lines) {
+			bodyLines = lines[startLine-1 : endLine]
+		}
+		body := strings.Join(bodyLines, "\n")
+
+		functions = append(functions, FunctionInfo{
+			Name:      name,
+			StartLine: startLine,
+			EndLine:   endLine,
+			LineCount: lineCount,
+			Body:      body,
+		})
+	}
+
+	return functions
+}
+
+func extractFunctions(content string, lines []string, language string) []FunctionInfo {
+	switch language {
+	case "javascript", "typescript":
+		return extractBraceFunctions(content, lines, jsFuncPatterns)
+	case "go":
+		return extractBraceFunctions(content, lines, goFuncPatterns)
+	case "rust":
+		return extractBraceFunctions(content, lines, rustFuncPatterns)
+	case "python":
+		return extractPythonFunctions(content, lines)
+	default:
+		return nil
+	}
+}
+
 func ParseFile(filePath string, cwd string) (*ParsedFile, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -135,10 +211,7 @@ func ParseFile(filePath string, cwd string) (*ParsedFile, error) {
 		rel = filePath
 	}
 
-	var functions []FunctionInfo
-	if language == "javascript" || language == "typescript" {
-		functions = extractFunctions(content, lines)
-	}
+	functions := extractFunctions(content, lines, language)
 
 	return &ParsedFile{
 		Path:         filePath,

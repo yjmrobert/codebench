@@ -106,7 +106,7 @@ async function bar(x) {
 		"}",
 	}
 
-	functions := extractFunctions(content, lines)
+	functions := extractFunctions(content, lines, "javascript")
 	if len(functions) != 2 {
 		t.Fatalf("expected 2 functions, got %d", len(functions))
 	}
