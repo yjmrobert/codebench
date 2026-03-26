@@ -117,4 +117,40 @@ func TestComputeComposite(t *testing.T) {
 			t.Errorf("Grade = %q, want F", composite.Grade)
 		}
 	})
+
+	t.Run("empty results", func(t *testing.T) {
+		composite := ComputeComposite([]*analyzer.Result{}, cfg)
+		if composite.Overall != 0 {
+			t.Errorf("Overall = %d, want 0 for empty results", composite.Overall)
+		}
+	})
+
+	t.Run("missing weight defaults to zero", func(t *testing.T) {
+		customCfg := config.DefaultConfig()
+		results := []*analyzer.Result{
+			makeResult("nonexistent", 100),
+		}
+		composite := ComputeComposite(results, customCfg)
+		if composite.Overall != 0 {
+			t.Errorf("Overall = %d, want 0 for unknown metric", composite.Overall)
+		}
+	})
+
+	t.Run("warnings collected for low scores", func(t *testing.T) {
+		results := []*analyzer.Result{
+			{
+				Metric:  config.MetricCoverage,
+				Score:   50,
+				Summary: "low coverage",
+				Details: []analyzer.Detail{
+					{Message: "file1 has low coverage"},
+					{Message: "file2 has low coverage"},
+				},
+			},
+		}
+		composite := ComputeComposite(results, cfg)
+		if len(composite.Warnings) != 2 {
+			t.Errorf("expected 2 warnings, got %d", len(composite.Warnings))
+		}
+	})
 }

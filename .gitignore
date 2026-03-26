@@ -1,4 +1,4 @@
-codebench
+/codebench
 *.db
 .codebench/
 coverage/

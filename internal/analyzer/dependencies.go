@@ -73,10 +73,12 @@ func (a *DependencyAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Con
 		}
 	}
 
+	const maxHealthyDependencies = 50
+
 	// Check total dependency count
 	totalDeps := len(pkg.Dependencies)
 	totalDevDeps := len(pkg.DevDependencies)
-	if totalDeps > 50 {
+	if totalDeps > maxHealthyDependencies {
 		issues++
 		details = append(details, Detail{
 			File:    "package.json",

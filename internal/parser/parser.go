@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -129,7 +130,10 @@ func ParseFile(filePath string, cwd string) (*ParsedFile, error) {
 		language = "unknown"
 	}
 
-	rel, _ := filepath.Rel(cwd, filePath)
+	rel, err := filepath.Rel(cwd, filePath)
+	if err != nil {
+		rel = filePath
+	}
 
 	var functions []FunctionInfo
 	if language == "javascript" || language == "typescript" {
@@ -152,6 +156,7 @@ func ParseFiles(filePaths []string, cwd string) ([]*ParsedFile, error) {
 	for _, fp := range filePaths {
 		f, err := ParseFile(fp, cwd)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to parse %s: %v\n", fp, err)
 			continue
 		}
 		files = append(files, f)

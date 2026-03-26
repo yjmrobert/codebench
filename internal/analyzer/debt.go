@@ -11,6 +11,11 @@ import (
 
 type DebtAnalyzer struct{}
 
+const (
+	maxLinePreviewLength = 100
+	maxDebtDetails       = 50
+)
+
 var debtMarkerPattern = regexp.MustCompile(`(?i)\b(TODO|FIXME|HACK|XXX)\b`)
 
 func (a *DebtAnalyzer) Name() config.MetricName {
@@ -31,8 +36,8 @@ func (a *DebtAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Config, c
 				totalMarkers += len(matches)
 				for _, match := range matches {
 					trimmed := line
-					if len(trimmed) > 100 {
-						trimmed = trimmed[:100]
+					if len(trimmed) > maxLinePreviewLength {
+						trimmed = trimmed[:maxLinePreviewLength]
 					}
 					details = append(details, Detail{
 						File:    file.RelativePath,
@@ -53,8 +58,8 @@ func (a *DebtAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Config, c
 	score := int(math.Round(math.Max(0, math.Min(100, 100-(density/maxDensity)*100))))
 
 	// Cap details
-	if len(details) > 50 {
-		details = details[:50]
+	if len(details) > maxDebtDetails {
+		details = details[:maxDebtDetails]
 	}
 
 	return &Result{

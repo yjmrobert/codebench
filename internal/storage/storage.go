@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -93,7 +94,13 @@ func SaveRun(dbPath string, score *scoring.CompositeScore, gitInfo GitInfo) (int
 	}
 	defer db.Close()
 
-	result, err := db.Exec(
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(
 		`INSERT INTO runs (timestamp, commit_hash, branch, overall_score, overall_grade) VALUES (?, ?, ?, ?, ?)`,
 		time.Now().UTC().Format(time.RFC3339),
 		gitInfo.CommitHash,
@@ -111,13 +118,17 @@ func SaveRun(dbPath string, score *scoring.CompositeScore, gitInfo GitInfo) (int
 	}
 
 	for _, metric := range score.Metrics {
-		_, err = db.Exec(
+		_, err = tx.Exec(
 			`INSERT INTO metric_scores (run_id, metric, score, grade) VALUES (?, ?, ?, ?)`,
 			runID, string(metric.Metric), metric.Score, metric.Grade,
 		)
 		if err != nil {
-			return runID, err
+			return 0, err
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return runID, nil

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -47,13 +49,21 @@ func NewRootCmd() *cobra.Command {
 }
 
 func runAnalysis(cmd *cobra.Command, args []string) error {
-	cwd, _ := os.Getwd()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
 	if len(args) > 0 {
-		cwd = args[0]
-		if !filepath.IsAbs(cwd) {
-			wd, _ := os.Getwd()
-			cwd = filepath.Join(wd, cwd)
+		target := args[0]
+		if filepath.IsAbs(target) {
+			cwd = target
+		} else {
+			cwd = filepath.Join(cwd, target)
 		}
+	}
+
+	if flagThreshold < 0 || flagThreshold > 100 {
+		return fmt.Errorf("--threshold must be between 0 and 100, got %d", flagThreshold)
 	}
 
 	format := flagFormat
@@ -92,21 +102,41 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 			}
 		}
 		if len(targetAnalyzers) == 0 {
-			fmt.Fprintf(os.Stderr, "Unknown metric: %s\n", flagMetric)
-			os.Exit(2)
+			names := make([]string, 0, len(allAnalyzers))
+			for _, a := range allAnalyzers {
+				names = append(names, string(a.Name()))
+			}
+			return fmt.Errorf("unknown metric %q; available metrics: %s", flagMetric, strings.Join(names, ", "))
 		}
 	} else {
 		targetAnalyzers = allAnalyzers
 	}
 
+	type analyzerResult struct {
+		result *analyzer.Result
+		err    error
+		name   string
+	}
+
+	resultsCh := make([]analyzerResult, len(targetAnalyzers))
+	var wg sync.WaitGroup
+	for i, a := range targetAnalyzers {
+		wg.Add(1)
+		go func(idx int, an analyzer.Analyzer) {
+			defer wg.Done()
+			r, err := an.Analyze(files, cfg, cwd)
+			resultsCh[idx] = analyzerResult{result: r, err: err, name: string(an.Name())}
+		}(i, a)
+	}
+	wg.Wait()
+
 	var results []*analyzer.Result
-	for _, a := range targetAnalyzers {
-		result, err := a.Analyze(files, cfg, cwd)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %s analyzer failed: %v\n", a.Name(), err)
+	for _, ar := range resultsCh {
+		if ar.err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %s analyzer failed: %v\n", ar.name, ar.err)
 			continue
 		}
-		results = append(results, result)
+		results = append(results, ar.result)
 	}
 
 	// Compute composite score
@@ -115,7 +145,9 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 	// Save to history
 	dbPath := filepath.Join(cwd, ".codebench", "history.db")
 	gitInfo := storage.GetGitInfo(cwd)
-	storage.SaveRun(dbPath, composite, gitInfo) // non-fatal
+	if _, err := storage.SaveRun(dbPath, composite, gitInfo); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to save run history: %v\n", err)
+	}
 
 	// Render output
 	projectName := filepath.Base(cwd)
