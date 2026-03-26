@@ -40,9 +40,12 @@ func (a *DebtAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Config, c
 						trimmed = trimmed[:maxLinePreviewLength]
 					}
 					details = append(details, Detail{
-						File:    file.RelativePath,
-						Message: fmt.Sprintf("%s: %s", match, trimmed),
-						Line:    i + 1,
+						File:      file.RelativePath,
+						Message:   fmt.Sprintf("%s: %s", match, trimmed),
+						Line:      i + 1,
+						Severity:  "info",
+						Category:  "resolve-todo",
+						Threshold: cfg.Thresholds.MaxDebtDensity,
 					})
 				}
 			}

@@ -67,8 +67,10 @@ func (a *DependencyAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Con
 		if version == "*" || version == "latest" {
 			issues++
 			details = append(details, Detail{
-				File:    "package.json",
-				Message: fmt.Sprintf("%s uses unpinned version %q", name, version),
+				File:     "package.json",
+				Message:  fmt.Sprintf("%s uses unpinned version %q", name, version),
+				Severity: "warning",
+				Category: "pin-version",
 			})
 		}
 	}
@@ -81,9 +83,12 @@ func (a *DependencyAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Con
 	if totalDeps > maxHealthyDependencies {
 		issues++
 		details = append(details, Detail{
-			File:    "package.json",
-			Message: fmt.Sprintf("%d production dependencies (consider reducing)", totalDeps),
-			Value:   float64(totalDeps),
+			File:      "package.json",
+			Message:   fmt.Sprintf("%d production dependencies (consider reducing)", totalDeps),
+			Value:     float64(totalDeps),
+			Severity:  "warning",
+			Category:  "reduce-dependencies",
+			Threshold: float64(maxHealthyDependencies),
 		})
 	}
 
@@ -98,8 +103,10 @@ func (a *DependencyAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Con
 	if !hasLock {
 		issues++
 		details = append(details, Detail{
-			File:    "package.json",
-			Message: "No lock file found — dependency versions may be non-deterministic",
+			File:     "package.json",
+			Message:  "No lock file found — dependency versions may be non-deterministic",
+			Severity: "warning",
+			Category: "add-lockfile",
 		})
 	}
 

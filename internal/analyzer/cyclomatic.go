@@ -66,6 +66,9 @@ func (a *CyclomaticAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Con
 					Message: fmt.Sprintf("%s() has cyclomatic complexity %d (threshold: %d)", fn.Name, complexity, threshold),
 					Line:    fn.StartLine,
 					Value:   float64(complexity),
+					Severity:  ComputeSeverity(float64(complexity), float64(threshold)),
+					Category:  "reduce-complexity",
+					Threshold: float64(threshold),
 				})
 			}
 		}
