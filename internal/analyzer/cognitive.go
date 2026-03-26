@@ -14,12 +14,12 @@ import (
 type CognitiveAnalyzer struct{}
 
 var (
-	cogIfPattern     = regexp.MustCompile(`\b(if|else if)\s*\(`)
+	cogIfPattern     = regexp.MustCompile(`\b(if|else if)\b`)
 	cogElsePattern   = regexp.MustCompile(`\belse\s*\{`)
-	cogLoopPattern   = regexp.MustCompile(`\b(for|while)\s*\(`)
+	cogLoopPattern   = regexp.MustCompile(`\b(for|while)\b`)
 	cogDoPattern     = regexp.MustCompile(`\bdo\s*\{`)
-	cogSwitchPattern = regexp.MustCompile(`\bswitch\s*\(`)
-	cogCatchPattern  = regexp.MustCompile(`\bcatch\s*\(`)
+	cogSwitchPattern = regexp.MustCompile(`\bswitch\b`)
+	cogCatchPattern  = regexp.MustCompile(`\bcatch\b`)
 	cogLogicalPattern = regexp.MustCompile(`&&|\|\||\?\?`)
 	cogTernaryPattern = regexp.MustCompile(`\?[^?:]*:`)
 	braceOpenPattern  = regexp.MustCompile(`\{`)

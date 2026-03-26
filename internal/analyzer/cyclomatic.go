@@ -13,20 +13,20 @@ import (
 type CyclomaticAnalyzer struct{}
 
 var cyclomaticPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`\bif\s*\(`),
-	regexp.MustCompile(`\belse\s+if\s*\(`),
-	regexp.MustCompile(`\bfor\s*\(`),
-	regexp.MustCompile(`\bwhile\s*\(`),
+	regexp.MustCompile(`\bif\b`),
+	regexp.MustCompile(`\belse\s+if\b`),
+	regexp.MustCompile(`\bfor\b`),
+	regexp.MustCompile(`\bwhile\b`),
 	regexp.MustCompile(`\bdo\s*\{`),
 	regexp.MustCompile(`\bcase\s+`),
-	regexp.MustCompile(`\bcatch\s*\(`),
+	regexp.MustCompile(`\bcatch\b`),
 	regexp.MustCompile(`&&`),
 	regexp.MustCompile(`\|\|`),
 	regexp.MustCompile(`\?\?`),
 	regexp.MustCompile(`\?[^?:]*:`),
 }
 
-var elseIfPattern = regexp.MustCompile(`\belse\s+if\s*\(`)
+var elseIfPattern = regexp.MustCompile(`\belse\s+if\b`)
 
 func computeCyclomaticComplexity(body string) int {
 	complexity := 1
