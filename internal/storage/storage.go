@@ -134,6 +134,51 @@ func SaveRun(dbPath string, score *scoring.CompositeScore, gitInfo GitInfo) (int
 	return runID, nil
 }
 
+// GetPreviousRun returns the most recent run record and its per-metric scores.
+// Returns nil, nil, nil if no previous runs exist.
+func GetPreviousRun(dbPath string) (*RunRecord, map[string]int, error) {
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return nil, nil, nil
+	}
+
+	db, err := ensureDB(dbPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer db.Close()
+
+	var r RunRecord
+	err = db.QueryRow(
+		`SELECT id, timestamp, commit_hash, branch, overall_score, overall_grade FROM runs ORDER BY id DESC LIMIT 1`,
+	).Scan(&r.ID, &r.Timestamp, &r.CommitHash, &r.Branch, &r.OverallScore, &r.OverallGrade)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+
+	rows, err := db.Query(
+		`SELECT metric, score FROM metric_scores WHERE run_id = ?`, r.ID,
+	)
+	if err != nil {
+		return &r, nil, err
+	}
+	defer rows.Close()
+
+	metricScores := make(map[string]int)
+	for rows.Next() {
+		var metric string
+		var score int
+		if err := rows.Scan(&metric, &score); err != nil {
+			continue
+		}
+		metricScores[metric] = score
+	}
+
+	return &r, metricScores, nil
+}
+
 func GetHistory(dbPath string, limit int) ([]RunRecord, error) {
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		return nil, nil

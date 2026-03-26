@@ -30,9 +30,12 @@ func (a *SizeAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Config, c
 		if file.LineCount > maxFileLines {
 			filesOverThreshold++
 			details = append(details, Detail{
-				File:    file.RelativePath,
-				Message: fmt.Sprintf("File has %d lines (threshold: %d)", file.LineCount, maxFileLines),
-				Value:   float64(file.LineCount),
+				File:      file.RelativePath,
+				Message:   fmt.Sprintf("File has %d lines (threshold: %d)", file.LineCount, maxFileLines),
+				Value:     float64(file.LineCount),
+				Severity:  ComputeSeverity(float64(file.LineCount), float64(maxFileLines)),
+				Category:  "split-file",
+				Threshold: float64(maxFileLines),
 			})
 		}
 
@@ -41,10 +44,13 @@ func (a *SizeAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Config, c
 			if fn.LineCount > maxFunctionLines {
 				functionsOverThreshold++
 				details = append(details, Detail{
-					File:    file.RelativePath,
-					Message: fmt.Sprintf("%s() has %d lines (threshold: %d)", fn.Name, fn.LineCount, maxFunctionLines),
-					Line:    fn.StartLine,
-					Value:   float64(fn.LineCount),
+					File:      file.RelativePath,
+					Message:   fmt.Sprintf("%s() has %d lines (threshold: %d)", fn.Name, fn.LineCount, maxFunctionLines),
+					Line:      fn.StartLine,
+					Value:     float64(fn.LineCount),
+					Severity:  ComputeSeverity(float64(fn.LineCount), float64(maxFunctionLines)),
+					Category:  "extract-function",
+					Threshold: float64(maxFunctionLines),
 				})
 			}
 		}

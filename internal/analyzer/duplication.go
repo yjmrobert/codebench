@@ -102,9 +102,12 @@ func (a *DuplicationAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Co
 					break
 				}
 				details = append(details, Detail{
-					File:    first.file,
-					Message: fmt.Sprintf("Lines %d-%d duplicated in %s:%d", first.line, first.line+windowSize-1, other.file, other.line),
-					Line:    first.line,
+					File:      first.file,
+					Message:   fmt.Sprintf("Lines %d-%d duplicated in %s:%d", first.line, first.line+windowSize-1, other.file, other.line),
+					Line:      first.line,
+					Severity:  "warning",
+					Category:  "extract-shared-code",
+					Threshold: cfg.Thresholds.MaxDuplicationPct,
 				})
 			}
 		}

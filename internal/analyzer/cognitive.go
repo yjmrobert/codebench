@@ -98,6 +98,9 @@ func (a *CognitiveAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Conf
 					Message: fmt.Sprintf("%s() has cognitive complexity %d (threshold: %d)", fn.Name, complexity, threshold),
 					Line:    fn.StartLine,
 					Value:   float64(complexity),
+					Severity:  ComputeSeverity(float64(complexity), float64(threshold)),
+					Category:  "reduce-nesting",
+					Threshold: float64(threshold),
 				})
 			}
 		}

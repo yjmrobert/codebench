@@ -93,6 +93,9 @@ func (a *CoverageAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Confi
 				File:    f.file,
 				Message: fmt.Sprintf("%.1f%% coverage (%d/%d lines)", pct, f.linesHit, f.linesFound),
 				Value:   pct,
+				Severity:  ComputeSeverityInverse(pct, float64(cfg.Thresholds.MinCoverage)),
+				Category:  "add-tests",
+				Threshold: float64(cfg.Thresholds.MinCoverage),
 			})
 		}
 	}
