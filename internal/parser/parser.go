@@ -192,7 +192,7 @@ func extractFunctions(content string, lines []string, language string) []Functio
 	}
 }
 
-func ParseFile(filePath string, cwd string) (*ParsedFile, error) {
+func ParseFile(filePath, cwd string) (*ParsedFile, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err

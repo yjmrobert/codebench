@@ -36,7 +36,7 @@ func gradeColor(grade string) lipgloss.Color {
 	}
 }
 
-func progressBar(score int, width int) string {
+func progressBar(score, width int) string {
 	filled := score * width / 100
 	empty := width - filled
 	green := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
