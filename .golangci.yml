@@ -1,0 +1,43 @@
+version: "2"
+
+run:
+  timeout: 3m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gocritic
+    - misspell
+    - unconvert
+
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+      disabled-checks:
+        - ifElseChain
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        - (*database/sql.DB).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Tx).Rollback
+        - (*os.File).Close
+        - (io.Closer).Close
+        - os.MkdirAll
+        - os.WriteFile
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+
+exclusions:
+  presets:
+    - comments
+    - std-error-handling
+  paths:
+    - vendor

@@ -98,7 +98,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-func Load(cwd string, configPath string) (*Config, error) {
+func Load(cwd, configPath string) (*Config, error) {
 	if configPath == "" {
 		configPath = filepath.Join(cwd, ".codebench.yml")
 	}

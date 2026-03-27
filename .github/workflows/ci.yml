@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build
+        run: make build
+        env:
+          CGO_ENABLED: "1"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: codebench-linux-amd64
+          path: codebench
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Run tests with race detector and coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        env:
+          CGO_ENABLED: "1"
+
+      - name: Display coverage summary
+        run: go tool cover -func=coverage.out
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.5
+
+  dogfood:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download codebench binary
+        uses: actions/download-artifact@v4
+        with:
+          name: codebench-linux-amd64
+
+      - name: Make binary executable
+        run: chmod +x ./codebench
+
+      - name: Run codebench self-analysis (JSON report)
+        run: ./codebench --json . > codebench-report.json
+
+      - name: Quality gate — score must be at least 50
+        run: ./codebench --threshold 50 .
+
+      - name: Upload self-analysis report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codebench-report
+          path: codebench-report.json

@@ -136,7 +136,7 @@ func (a *DependencyAnalyzer) Analyze(files []*parser.ParsedFile, cfg *config.Con
 	}, nil
 }
 
-func (a *DependencyAnalyzer) analyzeGoMod(goModPath string, cwd string) (*Result, error) {
+func (a *DependencyAnalyzer) analyzeGoMod(goModPath, cwd string) (*Result, error) {
 	f, err := os.Open(goModPath)
 	if err != nil {
 		return &Result{
